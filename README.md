@@ -86,3 +86,8 @@ While basic tutorials exist for driving LED strips, this project represents a co
 I require an ESP32 (purchased by me) because the project relies heavily on **Wi-Fi capabilities** to host the web server and better computation (also the small form-factor helps). A standard Arduino Uno would not be enought.
 
 ---
+
+Prototype:
+<p align="center">
+  <img src="prototip.jpeg" alt="Prototip Lampa" width="500">
+</p>
