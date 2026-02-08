@@ -23,11 +23,13 @@ For this project, I utilized:
 
 ##### Hardware:
 
-For this project, I designed a 3D-printable cylindrical design made from three parts:
+For this project, I designed a 3D-printable cylindrical design made from three parts (`Base.f3d`, `interior.f3d`, `capac.f3d`):
 * **Base**: Includes a slot for a USB-C breakout board.
 * **Center cylinder**: 22-faced shape for mounting LED strips.
 * **Cap**: Top enclosure.
 The parts assemble modularly for easy printing and integration.
+
+![3D Design Overview](lamp3D.png)
 
 The core of the visual display is a custom matrix with 22 vertical columns, each holding 13 LEDs. These LEDs originate from a 5m continuous strip that I cut to the required lengths, and I soldered every connection (GND, DATA and VCC).
 
@@ -79,3 +81,13 @@ The Web UI features a JavaScript-generated grid allowing users to "paint" specif
 ### 3. Setup & Video
 
 *Note: The physical assembly involves a complex 3D printed housing designed to diffuse the light and manage heat dissipation. The 22 distinct strips were aligned using a printed jig to ensure perfect grid alignment.*
+
+Video: https://youtu.be/seQi7z0X9K8
+
+![Internal Assembly & Wiring](prototip.jpeg)
+
+**Final Results:**
+
+| | | |
+|:---:|:---:|:---:|
+| ![Front View](lamp%20(1).jpeg) | ![Color Test](lamp%20(2).jpeg) | ![Side Profile](lamp%20(6).jpeg) |
