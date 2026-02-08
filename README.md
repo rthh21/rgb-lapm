@@ -13,7 +13,7 @@ The software architecture must bridge high-speed real-time rendering with asynch
 For this project, I utilized:
 
 * **1x ESP32-WROOM-32 Development Board** 
-* **286x WS2812B Addressable LEDs** (with 60 LEDS/m density)
+* **286x WS2812B Addressable LEDs** (WS2812B 60 LEDS/m density)
 * **1x USB-C Breakout Board** (Power delivery)
 * **1x 100µF Capacitor** (Power smoothing/Decoupling)
 * **Power Supply:** 5V High Amperage Source (Calculated for ~2.5A limit in software)
@@ -24,9 +24,9 @@ For this project, I utilized:
 ##### Hardware:
 
 For this project, I designed a 3D-printable cylindrical design made from three parts:
-- Base: Includes a slot for a USB-C breakout board.
-- Center cylinder: 22-faced shape for mounting LED strips.
-- Cap: Top enclosure.
+* **Base**: Includes a slot for a USB-C breakout board.
+* **Center cylinder**: 22-faced shape for mounting LED strips.
+* **Cap**: Top enclosure.
 The parts assemble modularly for easy printing and integration.
 
 The core of the visual display is a custom matrix with 22 vertical columns, each holding 13 LEDs. These LEDs originate from a 5m continuous strip that I cut to the required lengths, and I soldered every connection (GND, DATA and VCC).
@@ -69,9 +69,6 @@ The Web UI features a JavaScript-generated grid allowing users to "paint" specif
 
 ### 3. Setup & Video
 
-<div align = "center">
-<img src="LampProject/matrix_soldering.jpeg" alt="Matrix Construction" width="300">
-<img src="LampProject/final_case.jpeg" alt="Final Assembly" width="300">
-</div>
+
 
 *Note: The physical assembly involves a complex 3D printed housing designed to diffuse the light and manage heat dissipation. The 22 distinct strips were aligned using a printed jig to ensure perfect grid alignment.*
