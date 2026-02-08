@@ -2,7 +2,7 @@
 
 #### Task Requirements
 
-The objective is to design and implement an advanced IoT lighting system based on a high-density LED matrix (22x13), controlled via a dual-interface system: a native Apple HomeKit integration for seamless smart home automation and a custom-built Web Interface for more control.
+The objective is to design and implement an advanced IoT lighting system based on a high-density LED matrix (22x13), controlled via a dual-interface system: a native Apple HomeKit integration for seamless smart home automation and a custom-built Web Interface for more control. 
 
 The software architecture must bridge high-speed real-time rendering with asynchronous network communication. Key requirements include implementing a coordinate mapping algorithm for a manually soldered LED strips in zig-zag , a Pixel Grouping system allowing users to define and control arbitrary clusters of LEDs, and a suite of pre-made effects like Starlight or Fire running smoothly on the ESP32. The system requires non-volatile memory management for schedules and state persistence, along with a responsive UI stored in PROGMEM.
 
@@ -56,6 +56,11 @@ The system features a dual-control scheme:
 
 * **Apple HomeKit (HomeSpan):** I implemented a `LampAccessory` class inheriting from `Service::LightBulb`. This exposes the standard Hue/Saturation/Brightness (HSV) characteristics to iOS devices. When a user creates a scene in the Apple Home app, the `update()` override intercepts the payload, converts the HSB color space to RGB, and overrides the current animation mode to a solid color.
 * **Web Dashboard (The Interface):** For advanced control, I embedded a complete Single Page Application (SPA) within the ESP32's flash memory (`PROGMEM`). The UI connects to the backend via REST API endpoints (for example: , `/mode?m=1`, `/set?r=255...`).
+
+* **Save**
+To ensure a seamless user experience across power cycles, the system implements a robust non-volatile memory management strategy using the ESP32's Preferences API (a modern replacement for deprecated EEPROM). Instead of writing to flash on every loop cycle (which would degrade memory lifespan), the system performs "write-on-change" operations within the Web Server handlers.
+
+Key system states—including Power Status, Global Brightness, Active Mode, and Color Configurations (RGB/HSV values)—are serialized and stored in the lamp namespace. Upon boot (setup()), the firmware queries the NVS partition; if valid keys exist, the lamp restores its exact previous state immediately, bypassing the default initialization values. This ensures that the lamp behaves like a consumer appliance rather than a development board.
 
 **3. Advanced Feature: Dynamic Grouping**
 A unique feature of this architecture is the **user pixel editor**. To allow users to highlight specific areas of the lamp (for example: drawing a shape), I implemented a `ledGroupMap[NUM_LEDS]` array.
