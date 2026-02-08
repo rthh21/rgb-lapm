@@ -2,9 +2,9 @@
 
 #### Task Requirements
 
-The objective is to design and implement an advanced IoT lighting system based on a high-density LED matrix (22x13), controlled via a dual-interface system: a native Apple HomeKit integration for seamless smart home automation and a custom-built Web Interface for more control. 
+The objective is to design and implement an advanced IoT lighting system based on a high-density LED matrix (22x13), controlled via a dual-interface system: a native Apple HomeKit integration for seamless smart home automation and a custom-built Web Interface for more control.
 
-The software architecture must bridge high-speed real-time rendering with asynchronous network communication. Key requirements include implementing a coordinate mapping algorithm for a manually soldered LED strips in zig-zag , a Pixel Grouping system allowing users to define and control arbitrary clusters of LEDs, and a suite of pre-made effects like Starlight or Fire running smoothly on the ESP32. The system requires non-volatile memory management for schedules and state persistence, along with a responsive UI stored in PROGMEM.
+The software architecture must bridge high-speed real-time rendering with asynchronous network communication. Key requirements include implementing a coordinate mapping algorithm for a manually soldered LED strips in zig-zag, a Pixel Grouping system allowing users to define and control arbitrary clusters of LEDs, and a suite of pre-made effects like Starlight or Fire running smoothly on the ESP32. The system requires non-volatile memory management for schedules and state persistence, along with a responsive UI stored in PROGMEM.
 
 ### Implementation
 
@@ -12,8 +12,8 @@ The software architecture must bridge high-speed real-time rendering with asynch
 
 For this project, I utilized:
 
-* **1x ESP32-WROOM-32 Development Board** 
-* **286x WS2812B Addressable LEDs** (WS2812B 60 LEDS/m density)
+* **1x ESP32-WROOM-32 Development Board**
+* **287x WS2812B Addressable LEDs** (286 visible + 1 sacrificial pixel for signal integrity)
 * **1x USB-C Breakout Board** (Power delivery)
 * **1x 100µF Capacitor** (Power smoothing/Decoupling)
 * **Power Supply:** 5V High Amperage Source (Calculated for ~2.5A limit in software)
@@ -45,9 +45,11 @@ I implemented a modular state-machine approach. The main loop orchestrates three
 **1. The Render Engine (The View)**
 At the lowest level, the `FastLED` library drives the WS2812B protocol. However, drawing directly to the strip index `leds[i]` is unintuitive due to the Zig-Zag wiring. I implemented a hardware abstraction layer via the **`mapLEDs(x, y)`** function. This function translates logical Cartesian coordinates (0..21, 0..12) into the physical 1D index of the LED strip using bitwise operations to detect column parity (`x & 1`).
 
+To ensure fluid visuals and eliminate flickering during mode transitions, I implemented a **Temporal Dithering (Double Buffering)** system. Instead of rendering directly to the physical strip, effects draw to a virtual `targetLeds` buffer. The main loop then smoothly interpolates the current state towards the target using `nblend` (blending ratio ~15/255 per frame), creating organic fade-ins between effects.
+
 The rendering pipeline supports multiple generative modes:
 
-* **Particle Systems:** The **Fire Effect** uses a cooling/sparking heat map algorithm (`qsub8`, `random8`) simulated on a virtual grid and mapped to the LEDs.
+* **Particle Systems:** The **Fire Effect** uses a cooling/sparking heat map algorithm (`qsub8`, `random8`). The advanced **Fire 2012** mode optimizes performance by calculating the physics on a virtual half-width grid (11 columns) and mirroring it symmetrically, creating a balanced "torch" effect.
 * **Fluid Dynamics:** The **Liquid** and **Lava** effects utilize 3D Simplex Noise (`inoise8`) to generate organic, flowing textures that evolve over time (Z-axis offset).
 * **Trigonometric Patterns:** The **Neon Wave** and **Chroma** modes use `sin8` and polar coordinate math to create rotating gradients and oscillating interference patterns.
 
@@ -55,12 +57,12 @@ The rendering pipeline supports multiple generative modes:
 The system features a dual-control scheme:
 
 * **Apple HomeKit (HomeSpan):** I implemented a `LampAccessory` class inheriting from `Service::LightBulb`. This exposes the standard Hue/Saturation/Brightness (HSV) characteristics to iOS devices. When a user creates a scene in the Apple Home app, the `update()` override intercepts the payload, converts the HSB color space to RGB, and overrides the current animation mode to a solid color.
-* **Web Dashboard (The Interface):** For advanced control, I embedded a complete Single Page Application (SPA) within the ESP32's flash memory (`PROGMEM`). The UI connects to the backend via REST API endpoints (for example: , `/mode?m=1`, `/set?r=255...`).
+* **Web Dashboard (The Interface):** For advanced control, I embedded a complete Single Page Application (SPA) within the ESP32's flash memory (`PROGMEM`). The UI connects to the backend via REST API endpoints (for example: `/mode?m=1`, `/set?r=255...`).
 
 * **Save**
 To ensure a seamless user experience across power cycles, the system implements a robust non-volatile memory management strategy using the ESP32's Preferences API (a modern replacement for deprecated EEPROM). Instead of writing to flash on every loop cycle (which would degrade memory lifespan), the system performs "write-on-change" operations within the Web Server handlers.
 
-Key system states—including Power Status, Global Brightness, Active Mode, and Color Configurations (RGB/HSV values)—are serialized and stored in the lamp namespace. Upon boot (setup()), the firmware queries the NVS partition; if valid keys exist, the lamp restores its exact previous state immediately, bypassing the default initialization values. This ensures that the lamp behaves like a consumer appliance rather than a development board.
+Key system states—including Power Status, Global Brightness, Active Mode, and Color Configurations (RGB/HSV values)—are serialized and stored in the lamp namespace. Upon boot (`setup()`), the firmware queries the NVS partition; if valid keys exist, the lamp restores its exact previous state immediately, bypassing the default initialization values. This ensures that the lamp behaves like a consumer appliance rather than a development board.
 
 **3. Advanced Feature: Dynamic Grouping**
 A unique feature of this architecture is the **user pixel editor**. To allow users to highlight specific areas of the lamp (for example: drawing a shape), I implemented a `ledGroupMap[NUM_LEDS]` array.
@@ -68,12 +70,12 @@ The Web UI features a JavaScript-generated grid allowing users to "paint" specif
 
 **4. System Utilities & Persistence**
 
-* **NTP Synchronization:** The system connects to `pool.ntp.org` to retrieve precise local time, enabling the **Scheduler** feature (auto-turn off at specific hours).
+* **NTP Synchronization & Dynamic Timezone:** The system connects to `pool.ntp.org` to retrieve precise local time, enabling the **Scheduler** feature (auto-turn off at specific hours). Unlike static implementations, the GMT offset can be adjusted dynamically via the Web UI (`handleOffset`), allowing the user to correct the timezone without recompiling the firmware.
+* **Soft Start Sequence:** To prevent current spikes and visual shock upon power-up, the `setup()` routine executes a "Soft Start" fade-in sequence, gradually ramping up brightness from 0 to the user's saved preference after a self-test.
+* **Signal Integrity:** To ensure stable data transmission, the first physical LED is treated as a **sacrificial pixel** (`leds[0] = CRGB::Black`), acting as a voltage level shifter closer to the controller.
 * **Non-Blocking Timers:** Instead of `delay()`, the code uses `millis()` deltas for animation timing and `EVERY_N_MILLISECONDS` macros to maintain a consistent framerate (~30 FPS) while keeping the web server responsive.
 * **Safety:** A software power limiter is implemented via `FastLED.setMaxPowerInVoltsAndMilliamps(5, 2500)` to ensure the current draw never exceeds the USB-C capabilities, preventing brownouts.
 
 ### 3. Setup & Video
-
-
 
 *Note: The physical assembly involves a complex 3D printed housing designed to diffuse the light and manage heat dissipation. The 22 distinct strips were aligned using a printed jig to ensure perfect grid alignment.*
